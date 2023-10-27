@@ -1,0 +1,7 @@
+SELECT * FROM bom_flat 
+WHERE product_part_num = '100822470'
+AND effective_end_date_key > to_char(CURRENT_DATE, 'YYYYMMDD')::integer or effective_end_date_key = 19000101;
+
+SELECT * FROM bom_source 
+WHERE product_part_num = '100822470'
+AND effective_end_date_key > to_char(CURRENT_DATE, 'YYYYMMDD')::integer or effective_end_date_key = 19000101;

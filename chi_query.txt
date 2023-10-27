@@ -1,0 +1,142 @@
+WITH CHI_SPEC as ( 
+        
+        SELECT E1072633_CHI_WASH_SPEC.building_num, 
+        upper(replace(E1072633_CHI_WASH_SPEC.product_detail_name, ' ', '_')) as product_name, 
+        E1072633_CHI_WASH_SPEC.product, 
+        replace(E1072633_CHI_WASH_SPEC.build_line, 'L', '') as line_num, 
+        E1072633_CHI_WASH_SPEC.wash_machine, 
+        E1072633_CHI_WASH_SPEC.surface_area, 
+        E1072633_CHI_WASH_SPEC.prime,
+        E1072633_CHI_WASH_SPEC.rework, 
+        E1072633_CHI_WASH_SPEC.lpc_alpc_coefficient 
+        FROM osa_results.E1072633_CHI_WASH_SPEC E1072633_CHI_WASH_SPEC 
+        
+), 
+CHI_MBA as ( 
+
+        SELECT chi_particle_raw.drive_serial_num, 
+                chi_particle_raw.product_name, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num, 
+                chi_particle_raw.dom, 
+                cast(chi_particle_raw.particle_lpc_03_mba as double) * cast(CHI_SPEC.surface_area as double) as mba_par_idx 
+        FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+        LEFT JOIN CHI_SPEC ON ( chi_particle_raw.line_num = CHI_SPEC.line_num AND CHI_SPEC.product = 'MBA' AND CHI_SPEC.surface_area IS NOT NULL 
+                                AND (chi_particle_raw.product_name = CHI_SPEC.product_name OR STRPOS(chi_particle_raw.product_name, CHI_SPEC.product_name) > 0 )) 
+        WHERE chi_particle_raw.particle_lpc_03_mba IS NOT NULL
+        
+), 
+CHI_VCMB as ( 
+
+        SELECT chi_particle_raw.drive_serial_num, 
+                chi_particle_raw.product_name, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num, 
+                chi_particle_raw.dom, 
+                cast(chi_particle_raw.particle_lpc_03_vcmb as double) * cast(CHI_SPEC.surface_area as double) * cast(CHI_SPEC.lpc_alpc_coefficient as double) as vcmb_par_idx 
+        FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+        LEFT JOIN CHI_SPEC ON ( chi_particle_raw.line_num = CHI_SPEC.line_num AND CHI_SPEC.product = 'Bottom VCM' AND CHI_SPEC.surface_area IS NOT NULL AND CHI_SPEC.lpc_alpc_coefficient IS NOT NULL 
+                                AND (chi_particle_raw.product_name = CHI_SPEC.product_name OR STRPOS(chi_particle_raw.product_name, CHI_SPEC.product_name) > 0 )) 
+        WHERE chi_particle_raw.particle_lpc_03_vcmb IS NOT NULL
+        
+), 
+CHI_VCMT as ( 
+
+        SELECT chi_particle_raw.drive_serial_num, 
+                chi_particle_raw.product_name, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num, 
+                chi_particle_raw.dom, 
+                cast(chi_particle_raw.particle_lpc_03_vcmt as double) * cast(CHI_SPEC.surface_area as double) * cast(CHI_SPEC.lpc_alpc_coefficient as double) as vcmt_par_idx
+        FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+        LEFT JOIN CHI_SPEC ON ( chi_particle_raw.line_num = CHI_SPEC.line_num AND CHI_SPEC.product = 'Upper VCM' AND CHI_SPEC.surface_area IS NOT NULL AND CHI_SPEC.lpc_alpc_coefficient IS NOT NULL 
+                                AND (chi_particle_raw.product_name = CHI_SPEC.product_name OR STRPOS(chi_particle_raw.product_name, CHI_SPEC.product_name) > 0 )) 
+        WHERE chi_particle_raw.particle_lpc_03_vcmt IS NOT NULL
+        
+), 
+CHI_STMCV as ( 
+
+        SELECT chi_particle_raw.drive_serial_num, 
+                chi_particle_raw.product_name, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num, 
+                chi_particle_raw.dom, 
+                cast(chi_particle_raw.particle_lpc_03_stmcv as double) * cast(CHI_SPEC.surface_area as double) * cast(CHI_SPEC.lpc_alpc_coefficient as double) * cast(CHI_SPEC.prime as double) as stmcv_par_idx 
+        FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+        LEFT JOIN CHI_SPEC ON ( chi_particle_raw.line_num = CHI_SPEC.line_num AND CHI_SPEC.product = 'Top Cover' AND CHI_SPEC.surface_area IS NOT NULL 
+                                AND CHI_SPEC.lpc_alpc_coefficient IS NOT NULL AND CHI_SPEC.prime IS NOT NULL 
+                                AND (chi_particle_raw.product_name = CHI_SPEC.product_name OR STRPOS(chi_particle_raw.product_name, CHI_SPEC.product_name) > 0 )) 
+        WHERE chi_particle_raw.particle_lpc_03_stmcv IS NOT NULL
+        
+), 
+CHI_HSA as ( 
+
+        SELECT chi_particle_raw.drive_serial_num, 
+                chi_particle_raw.product_name, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num, 
+                chi_particle_raw.dom, 
+                chi_particle_raw.particle_lpc_03_hsa, 
+                cast(chi_particle_raw.particle_lpc_03_hsa as double) * cast(CHI_SPEC.surface_area as double) as hsa_par_idx 
+        FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+        LEFT JOIN CHI_SPEC ON ( chi_particle_raw.line_num = CHI_SPEC.line_num AND CHI_SPEC.product = 'HSA' AND CHI_SPEC.surface_area IS NOT NULL 
+                                AND (chi_particle_raw.product_name = CHI_SPEC.product_name OR STRPOS(chi_particle_raw.product_name, CHI_SPEC.product_name) > 0 )) 
+        WHERE chi_particle_raw.particle_lpc_03_hsa IS NOT NULL 
+        
+),
+RTPAD_IDX as (
+	SELECT chi_particle_raw.drive_serial_num, 
+		chi_particle_raw.run_type, 
+		chi_particle_raw.line_num, 
+		chi_particle_raw.dom, 
+		chi_particle_raw.rtpad_tot_prtcl_cnt as rtpad
+	FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+), 
+LSM_IDX as (
+
+	SELECT chi_particle_raw.sn as drive_serial_num, 
+	       chi_particle_raw.dom, 
+	       chi_particle_raw.run_type, 
+	       chi_particle_raw.line_num, 
+	       SUM(B.lms_vaule) as lms_sum, 
+	       AVG(B.lms_vaule) as lms_mean
+	FROM osa_results.e1110097_chi_particle_raw chi_particle_raw
+	CROSS JOIN unnest(array['hsi', 'bco', 'dsi', 'blm', 'hsr', 
+							'csr', 'blp', 'csi', 'lai', 'hmm', 
+							'tci', 'bud', 'dsr', 'bdl', 'lcr', 
+							'pri', 'ucr', 'sni', 'cab', 'uvr', 
+							'bcu', 'scr', 'blv', 'uai'],
+						array[chi_particle_raw.hsi, chi_particle_raw.bco, chi_particle_raw.dsi, 
+							 chi_particle_raw.blm, chi_particle_raw.hsr, chi_particle_raw.csr, 
+							 chi_particle_raw.blp, chi_particle_raw.csi, chi_particle_raw.lai, 
+							 chi_particle_raw.hmm, chi_particle_raw.tci, chi_particle_raw.bud, 
+							 chi_particle_raw.dsr, chi_particle_raw.bdl, chi_particle_raw.lcr, 
+							 chi_particle_raw.pri, chi_particle_raw.ucr, chi_particle_raw.sni, 
+							 chi_particle_raw.cab, chi_particle_raw.uvr, chi_particle_raw.bcu, 
+							 chi_particle_raw.scr, chi_particle_raw.blv, chi_particle_raw.uai ]) B ( lms_station, lms_vaule )
+	GROUP BY chi_particle_raw.sn,
+                chi_particle_raw.dom, 
+                chi_particle_raw.run_type, 
+                chi_particle_raw.line_num 
+)
+SELECT chi_particle_raw.*,
+        CHI_MBA.mba_par_idx,
+        CHI_VCMB.vcmb_par_idx,
+        CHI_VCMT.vcmt_par_idx,
+        CHI_STMCV.stmcv_par_idx, 
+        CHI_HSA.hsa_par_idx, 
+        CASE WHEN ( CHI_MBA.mba_par_idx IS NOT NULL AND CHI_VCMB.vcmb_par_idx IS NOT NULL AND CHI_VCMT.vcmt_par_idx IS NOT NULL AND CHI_STMCV.stmcv_par_idx IS NOT NULL AND CHI_HSA.hsa_par_idx IS NOT NULL) THEN (CHI_MBA.mba_par_idx + CHI_VCMB.vcmb_par_idx + CHI_VCMT.vcmt_par_idx + CHI_STMCV.stmcv_par_idx + CHI_HSA.hsa_par_idx) 
+                ELSE NULL
+        END AS drive_par_idx, 
+        RTPAD_IDX.rtpad, 
+        LSM_IDX.lms_sum, 
+        LSM_IDX.lms_mean 
+FROM osa_results.e1110097_chi_particle_raw chi_particle_raw 
+LEFT JOIN CHI_MBA ON ( chi_particle_raw.drive_serial_num = CHI_MBA.drive_serial_num AND chi_particle_raw.dom = CHI_MBA.dom AND chi_particle_raw.run_type = CHI_MBA.run_type AND chi_particle_raw.line_num = CHI_MBA.line_num )
+LEFT JOIN CHI_VCMB ON ( chi_particle_raw.drive_serial_num = CHI_VCMB.drive_serial_num AND chi_particle_raw.dom = CHI_VCMB.dom AND chi_particle_raw.run_type = CHI_VCMB.run_type AND chi_particle_raw.line_num = CHI_VCMB.line_num )
+LEFT JOIN CHI_VCMT ON ( chi_particle_raw.drive_serial_num = CHI_VCMT.drive_serial_num AND chi_particle_raw.dom = CHI_VCMT.dom AND chi_particle_raw.run_type = CHI_VCMT.run_type AND chi_particle_raw.line_num = CHI_VCMT.line_num )
+LEFT JOIN CHI_STMCV ON ( chi_particle_raw.drive_serial_num = CHI_STMCV.drive_serial_num AND chi_particle_raw.dom = CHI_STMCV.dom AND chi_particle_raw.run_type = CHI_STMCV.run_type AND chi_particle_raw.line_num = CHI_STMCV.line_num )
+LEFT JOIN CHI_HSA ON ( chi_particle_raw.drive_serial_num = CHI_HSA.drive_serial_num AND chi_particle_raw.dom = CHI_HSA.dom AND chi_particle_raw.run_type = CHI_HSA.run_type AND chi_particle_raw.line_num = CHI_HSA.line_num )
+LEFT JOIN RTPAD_IDX ON ( chi_particle_raw.drive_serial_num = RTPAD_IDX.drive_serial_num AND chi_particle_raw.dom = RTPAD_IDX.dom AND chi_particle_raw.run_type = RTPAD_IDX.run_type AND chi_particle_raw.line_num = RTPAD_IDX.line_num )
+LEFT JOIN LSM_IDX ON ( chi_particle_raw.drive_serial_num = LSM_IDX.drive_serial_num AND chi_particle_raw.dom = LSM_IDX.dom AND chi_particle_raw.run_type = LSM_IDX.run_type AND chi_particle_raw.line_num = LSM_IDX.line_num );
+WHERE CHI_MBA.mba_par_idx IS NOT NULL;
